@@ -15,7 +15,7 @@ Ox_tank_vol = 0.01396612489262478177383457064491
 Ox_tank_length = 1.7526
 Ox_tank_diameter = (Ox_tank_vol/(math.pi*Ox_tank_length))**0.5
 Aluminum_weight_percent = 0
-Carbon_black_weight_precent = 0
+Carbon_black_weight_precent = 10
 
 
 CC_vol = 0.4826
@@ -28,7 +28,7 @@ Nozzle_Discharge_Ratio = 0.9
 # Assuming showerhead injector for now
 Injector_Hole_Diamter = 0.0015
 Number_of_Injector_Holes = 60
-Injector_Discharge_Coefficient = 0.5
+Injector_Discharge_Coefficient = 0.55
 
 
 c_eff = 0.9
@@ -50,8 +50,6 @@ time_step = 0.01
 simulation_time = 8
 OF_ratio = 4.5
 fuel_density = 1000
-
-from CoolProp.CoolProp import PropsSI
 
 def Oxidizer_Properties(T, fluid):
     '''Returns a dictionary of properties for a given oxidizer at a specified temperature in Kelvin. 
@@ -243,7 +241,6 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
             print("Burn Complete")
             break
     new_overall_system['Impulse'] = new_overall_system['Isp']*ox_mass*(9.8)
-    #new_overall_system['Impulse'] = new_overall_system['Impulse'][new_overall_system['Impulse']!=0]
     new_overall_system['Mass_Flow_Ox'] = new_overall_system['Mass_Flow_Ox'][new_overall_system['Mass_Flow_Ox']!=0]
     new_overall_system['P_chamber'] = new_overall_system['P_chamber'][new_overall_system['P_chamber']!=0]
     new_overall_system['Impulse'] = new_overall_system['Impulse'][:int(time_propert['end_time']/time_propert['Change_in_time']+1)]
@@ -257,15 +254,15 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
 
 card_str = """
 fuel
-fuel C C(s)       C 1.0      wt%=5.00
+fuel C C(s)       C 1.0      wt%={0}
 t(k)=298.15       h,cal=0.0
 
-fuel AL           AL 1.0     wt%=0.00
+fuel AL           AL 1.0     wt%={1}
 t(k)=298.15       h,cal=0.0
 
-fuel C22H46       C 22.0  H 46.0     wt%=90.00
+fuel C22H46       C 22.0  H 46.0     wt%={2}
 t(k)=298.15       h,cal=-39600.0   rho=0.9
-"""
+""".format(Carbon_black_weight_precent, Aluminum_weight_percent, 100 - Carbon_black_weight_precent - Aluminum_weight_percent)
 add_new_fuel( 'Paraffin', card_str )
 C = CEA_Obj(fuelName="Paraffin", oxName='N2O')
 
@@ -284,7 +281,7 @@ dynamic_system_propert={
     'Total_mass_discharged':Starting_Ox_Mass,
     'Grain_ID':Grain_ID,
     'Grain_OD':Grain_OD,
-    'Fuel_mass':Starting_Ox_Mass/4.5,
+    'Fuel_mass':Starting_Ox_Mass/OF_ratio,
     'Gas_mass':0,
 }
 constant_system_properties={
