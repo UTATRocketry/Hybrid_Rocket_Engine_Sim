@@ -1,42 +1,47 @@
 from rocketcea.cea_obj import CEA_Obj
-#from rocketcea.cea_obj_w_units import CEA_Obj
 from rocketcea.cea_obj import add_new_fuel
-import math
 from CoolProp.CoolProp import PropsSI
 import CoolProp.CoolProp as CP
 import numpy as np
 import scipy
 import math
 import copy
+from matplotlib import pyplot as plt
+
 
 #The Sim
 #in SI units
-Ox_tank_vol = 0.01396612489262478177383457064491
+dry_mass = 40
+Ox_tank_vol = 0.026864
 Ox_tank_length = 1.7526
 Ox_tank_diameter = (Ox_tank_vol/(math.pi*Ox_tank_length))**0.5
 Aluminum_weight_percent = 0
 Carbon_black_weight_precent = 10
+viscosity = 3.70e-5
+blowing_number = 15
+CC_vol = 0.019661
+a = 0.000155
+n = 0.45
+m = 0
 
 
-CC_vol = 0.4826
-
-Nozzle_Throat_Diameter = 0.0954278
-Nozzle_Expansion_Ratio = 1.2
-Nozzle_Efficiency = 0.95
-Nozzle_Discharge_Ratio = 0.9
+Nozzle_Throat_Diameter = 0.0468
+Nozzle_Expansion_Ratio = 5.217
+Nozzle_Efficiency = 0.8
+Nozzle_Discharge_Ratio = 0.85
 
 # Assuming showerhead injector for now
 Injector_Hole_Diamter = 0.0015
 Number_of_Injector_Holes = 60
-Injector_Discharge_Coefficient = 0.55
+Injector_Discharge_Coefficient = 0.35
 
 
-c_eff = 0.9
-Grain_ID = 0.1
-Grain_OD = 0.125
-Grain_Length = 1.5
+c_eff = 0.85
+Grain_ID = 0.0754
+Grain_OD = 0.123
+Grain_Length = 0.754
 
-Starting_Tank_Pressure = 5.516e6
+Starting_Tank_Pressure = 5516000
 Starting_Chamber_Pressure = 101325
 Starting_Ox_Mass = 18
 For_flight = 0
@@ -47,10 +52,10 @@ fluid = 'N2O'
 
 time_step = 0.01
 # I Want to try and avoid using this
-simulation_time = 8
+simulation_time = 16
 OF_ratio = 4.5
-fuel_density = 1000
-
+fuel_density = 900
+is_fly = True
 def Oxidizer_Properties(T, fluid):
     '''Returns a dictionary of properties for a given oxidizer at a specified temperature in Kelvin. 
     The oxidizer name should be as referred to by CoolProp (i.e., NO2, O2). 
@@ -72,11 +77,14 @@ def Oxidizer_Properties(T, fluid):
     return properties
 
 def find_temp_for_vapor_pressure(T, P_target, fluid):
+    '''Function to calculate the vapor pressure at a desired temperature and gives the error '''
     vapor_pressure = PropsSI('P', 'T', T, 'Q', 0, fluid)
     return vapor_pressure - P_target
 
 
 def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_propert, total_system_properties):
+    '''Models the pressure, temperature, and mass flow through the ox tank at a given timestep given the oxidizer 
+    and the system properteis at the previous time step'''
     current_system = copy.deepcopy(system_prev)
     ox_propert = Oxidizer_Properties(system_prev['Ox_tank_temperature'], fluid)
 
@@ -95,10 +103,9 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
     #Pressure difference should be positive
     if dP < 0:
         dP = 0
-
     if time_propert['end_time'] == 0 or time_propert['Current_time'] <= time_propert['end_time']:
         if system_prev['Current_liquid_oxidizer_mass'] == 0:
-            current_system['Mass_Flow_Ox'] = (const_propert['Injector_Coefficient_of_Discharge']*const_propert['Number_of_Holes']*current_system['P_oxtank']/current_system['Oxidizer_properties']['Temperature']**0.5)*(system_prev['Gamma']/(current_system['Oxidizer_properties']['Compressibility']*R))**0.5*M_combust_chamb*(1+(system_prev['Gamma']-1)/2*M_combust_chamb**2)**((-system_prev['Gamma']-1)/(2*(system_prev['Gamma']-1)))
+            current_system['Mass_Flow_Ox'] = (const_propert['Injector_Coefficient_of_Discharge']*math.pi*(const_propert['Injector_Hole_Size']/2)**2*const_propert['Number_of_Holes']*current_system['P_oxtank']/current_system['Oxidizer_properties']['Temperature']**0.5)*(system_prev['Gamma']/(current_system['Oxidizer_properties']['Compressibility']*R))**0.5*M_combust_chamb*(1+(system_prev['Gamma']-1)/2*M_combust_chamb**2)**((-system_prev['Gamma']-1)/(2*(system_prev['Gamma']-1)))
         else:
             current_system['Mass_Flow_Ox'] = (const_propert['Injector_Coefficient_of_Discharge']*math.pi*(const_propert['Injector_Hole_Size']/2)**2*const_propert['Number_of_Holes']*(2*current_system['Oxidizer_properties']['Density_liquid']*dP)**0.5)
     elif time_propert['end_time'] > 0 and time_propert['Current_time'] > time_propert['end_time']:
@@ -131,8 +138,7 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
     elif system_prev['Current_liquid_oxidizer_mass'] <= 0 and current_system['Mass_Flow_Ox'] > 0:
         if current_system['Current_liquid_oxidizer_mass'] != 0:
             current_system['Current_liquid_oxidizer_mass'] = 0
-            current_system['Total_mass_discharged'] = 0
-            return current_system
+
         
         Z_old = current_system['Oxidizer_properties']['Compressibility']
         Zguess = Z_old
@@ -143,34 +149,45 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
         while epsilon >= tolerance:
             T_ratio = ((Zguess * current_system['Total_mass_discharged']) / (Z_old * system_prev['Total_mass_discharged'])) ** 0.3
             T_tnk = T_ratio * T_initial
+            #Nitrous would have solidified at this point
+            if T_tnk<182.23:
+                T_tnk = 182.23
+                T_ratio = T_tnk/T_initial
+                P_ratio = T_ratio ** (current_system['Gamma']/ (current_system['Gamma']-1))
+                P_tnk = P_ratio * P_initial
+                current_system['Ox_tank_temperature'] = T_tnk
+                current_system['P_oxtank'] = P_tnk
+                current_system['Oxidizer_properties'] = Oxidizer_Properties(current_system['Ox_tank_temperature'], const_propert['fluid'])
+                Z = current_system['Oxidizer_properties']['Compressibility']  
+                current_system['Total_mass_discharged'] = 0
+                return current_system    
+
             P_ratio = T_ratio ** (current_system['Gamma']/ (current_system['Gamma']-1))
             P_tnk = P_ratio * P_initial
-            Z = PropsSI('Z', 'T', T_tnk, 'P', P_tnk, fluid)            
+
+            current_system['Ox_tank_temperature'] = T_tnk
+            current_system['P_oxtank'] = P_tnk
+            current_system['Oxidizer_properties'] = Oxidizer_Properties(current_system['Ox_tank_temperature'], const_propert['fluid'])
+            Z = current_system['Oxidizer_properties']['Compressibility']            
             epsilon = abs(Zguess - Z)
             Zguess = (Zguess + Z) / 2
     
     return current_system
 
-def Const_OF(staticsystem, dynamicsystem, time):
-    new_dynamic_system = copy.deepcopy(dynamicsystem)
-    new_dynamic_system['Mass_flow_fuel'] = new_dynamic_system['Mass_Flow_Ox']/staticsystem['OF']
-    new_dynamic_system['Regression_rate'] = new_dynamic_system['Mass_flow_fuel']/(staticsystem['Fuel_density']*math.pi*new_dynamic_system['Grain_ID']*staticsystem['Grain_length'])
+def Regression_Rate(staticsystem, dynamicsystem, time):
+    '''Calculates the regression rate of the system using an imperically fitted function: r = aG^nL^m'''
+    new_dynamic_system = copy.deepcopy(dynamicsystem)    
+    new_dynamic_system['Regression_rate'] = staticsystem['a']*(new_dynamic_system['Mass_Flow_Ox']/(0.25*new_dynamic_system['Grain_ID']**2*math.pi))**staticsystem['n']*staticsystem['Grain_length']**staticsystem['m']
+    new_dynamic_system['Mass_flow_fuel'] = new_dynamic_system['Regression_rate']*(staticsystem['Fuel_density']*math.pi*new_dynamic_system['Grain_ID']*staticsystem['Grain_length'])
+    staticsystem['OF'] = new_dynamic_system['Mass_Flow_Ox']/new_dynamic_system['Mass_flow_fuel']
     new_dynamic_system['Old_Grain_ID'] = new_dynamic_system['Grain_ID']
     new_dynamic_system['Grain_ID'] = new_dynamic_system['Grain_ID'] + 2*new_dynamic_system['Regression_rate']*time['Change_in_time']
     new_dynamic_system['Fuel_mass'] = new_dynamic_system['Fuel_mass'] - new_dynamic_system['Mass_flow_fuel']*time['Change_in_time']
     return new_dynamic_system
 
 
-
-def comb(staticsystem, dynamicsystem, time):
-    new_dynamic_system = copy.deepcopy(dynamicsystem)
-    if time['Current_time'] <= time['end_time'] or time['end_time'] == 0:
-
-        print(new_dynamic_system['Gamma'])
-    return new_dynamic_system
-
-
-def chamber(staticsystem, dynamicsystem, time, CEA, P_atm):
+def chamber(staticsystem, dynamicsystem, time, P_atm):
+    '''Calculates the chamber pressure at the next time step'''
     if staticsystem['Chamber_volume'] == 0:
         V = 0.25*math.pi*dynamicsystem['Grain_ID']**2*staticsystem['Grain_length']
     else:
@@ -184,7 +201,7 @@ def chamber(staticsystem, dynamicsystem, time, CEA, P_atm):
     dynamicsystem['Gas_mass'] = dynamicsystem['Gas_mass'] + dm_g*time['Change_in_time']
 
     dP = dynamicsystem['P_chamber']*(dm_g/dynamicsystem['Gas_mass'] - dV/V)
-    dynamicsystem['P_chamber'] +=dP*time['Change_in_time']
+    dynamicsystem['P_chamber'] += dP*time['Change_in_time']
     if dynamicsystem['P_chamber'] <= P_atm:
         dynamicsystem['P_chamber'] = P_atm
         dynamicsystem['Nozzle_mass_flow'] = 0
@@ -192,12 +209,15 @@ def chamber(staticsystem, dynamicsystem, time, CEA, P_atm):
     
 
 def sim_iteration(overallsystem, staticsystem, dynamicsystem, time, iteration, CEA, P_atm):
+    '''ith iteration of the simulation'''
     time['Current_time'] = time['Current_time'] + time['Change_in_time']
     cursystem = ox_tank(staticsystem['fluid'], dynamicsystem, P_atm, time, staticsystem, overallsystem)
-    cursystem = Const_OF(staticsystem, cursystem, time)
-    cursystem['Cstar'] = CEA.get_Cstar(cursystem['P_chamber'], constant_system_properties['OF'])
-    cursystem = chamber(staticsystem, cursystem, time, CEA, P_atm)
-    Isp = CEA.get_Isp(cursystem['P_chamber'], staticsystem['OF'], staticsystem['Nozzle_expansion_ratio'])
+    cursystem = Regression_Rate(staticsystem, cursystem, time)
+
+    #Note to self: CEA works in IMPERIAL!!!
+    cursystem['Cstar'] = CEA.get_Cstar(cursystem['P_chamber']*145/10e5, constant_system_properties['OF'])*c_eff * 0.3048
+    cursystem = chamber(staticsystem, cursystem, time, P_atm)
+    Isp = CEA.get_Isp(cursystem['P_chamber']*145/10e5, staticsystem['OF'], staticsystem['Nozzle_expansion_ratio'])
     overallsystem['time'][iteration] = time['Current_time']
     overallsystem['Total_mass_discharged'][iteration] = cursystem['Total_mass_discharged']
     overallsystem['P_oxtank'][iteration] = cursystem['P_oxtank']
@@ -214,19 +234,21 @@ def sim_iteration(overallsystem, staticsystem, dynamicsystem, time, iteration, C
     return staticsystem, cursystem, overallsystem, time
 
 def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
+    '''Main function of the sim. Loops through multiple iterations to get the overall system properties'''
     i = 0
     new_static_system = copy.deepcopy(static_system)
     new_dynamic_system = copy.deepcopy(dynamic_system)
     new_overall_system = copy.deepcopy(overallsystem)
     ox_mass = new_dynamic_system['Total_mass_discharged']
+    P_atm = 101325
+    v_init = 0
+    init_mass = new_dynamic_system['total_rocket_mass']
+    height = 0
     while True:
-        if new_static_system['is_flying']:
-            # To do: allow for flight config
-            pass
-        else:
-            P_atm = 101325
+        
         time['Current_time'] = i*time['Change_in_time']
         i+=1
+
         new_static_system, new_dynamic_system, new_overall_system, time = sim_iteration(new_overall_system, new_static_system, new_dynamic_system, time, i, CEA, P_atm)
         if new_dynamic_system['Grain_ID']>=new_dynamic_system['Grain_OD']:
             print("No fuel left")
@@ -240,17 +262,52 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
         elif new_dynamic_system['P_chamber'] <= P_atm:
             print("Burn Complete")
             break
+        if new_static_system['is_flying']:
+            new_dynamic_system['total_rocket_mass'] = static_system['dry_mass'] + new_dynamic_system['Total_mass_discharged'] + new_dynamic_system['Fuel_mass']
+            delta_v = new_overall_system['Isp'][i]*9.8*np.log(init_mass/new_dynamic_system['total_rocket_mass']) - 3.986*(10**(14))/(6371000+height)**2*time['Current_time']
+            v_init += delta_v*time['Change_in_time']
+            height+=v_init*time['Change_in_time']
+            P_atm = 101325*np.exp(0.00011863*height)
+        else:
+            P_atm = 101325
+
     new_overall_system['Impulse'] = new_overall_system['Isp']*ox_mass*(9.8)
     new_overall_system['Mass_Flow_Ox'] = new_overall_system['Mass_Flow_Ox'][new_overall_system['Mass_Flow_Ox']!=0]
     new_overall_system['P_chamber'] = new_overall_system['P_chamber'][new_overall_system['P_chamber']!=0]
-    new_overall_system['Impulse'] = new_overall_system['Impulse'][:int(time_propert['end_time']/time_propert['Change_in_time']+1)]
-    new_overall_system['Thrust'] = (new_overall_system['Impulse']/time_propert['Current_time'])
+    new_overall_system['Impulse'] = new_overall_system['Impulse'][new_overall_system['Impulse']!=0]
+    new_overall_system['OF'] = new_overall_system['OF'][new_overall_system['OF']!=0]
+
+    new_overall_system['Thrust'] = ((new_overall_system['Impulse'])/time['Current_time'])
+    plt.plot(new_overall_system['time'][:len(new_overall_system['Thrust'])], new_overall_system['Thrust'], 'o')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Thrust (N)')
+    plt.title('Thrust vs. Time')
+    plt.show()
+    plt.plot(new_overall_system['time'][:len(new_overall_system['Mass_Flow_Ox'])], new_overall_system['Mass_Flow_Ox'], 'o')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Oxidizer Mass Flow (kg/s)')
+    plt.title('Oxidizer Mass Flow vs. Time')
+    plt.show()
+    plt.plot(new_overall_system['time'][:len(new_overall_system['OF'])], new_overall_system['OF'], 'o')
+    plt.xlabel('Time (s)')
+    plt.ylabel('OF Ratio')
+    plt.title('OF Ratio vs. Time')
+    plt.show()
+    plt.plot(new_overall_system['time'][:len(new_overall_system['P_chamber'])], new_overall_system['P_chamber']*145/10e5, 'o')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Combustion Chamber Pressure (Psi)')
+    plt.title('Combustion Chamber Pressure vs. Time')
+    plt.show()
     print("Max Thrust (N): ", max(new_overall_system['Thrust']))
-    print("Average Thrust (N): ", np.average(new_overall_system['Thrust']))
+    print("OF ratio:", np.average(new_overall_system['OF']))
+    print("Average Impulse (Ns): ", np.average(new_overall_system['Impulse']))
+
+    print("Average Thrust (N): ", (np.average(new_overall_system['Thrust'])))
     print("Average Mass Flow Rate (kg/s): ", np.average(new_overall_system['Mass_Flow_Ox']))
     print("Average Combustion Chamber Pressure (psi): ", np.average(new_overall_system['P_chamber'])*145/10e5)
     print("Max Combustion Chamber Pressure (psi): ", max(new_overall_system['P_chamber'])*145/10e5)
     print("Burn Time (s): ", max(new_overall_system['time']))
+    return new_overall_system
 
 card_str = """
 fuel
@@ -279,10 +336,12 @@ dynamic_system_propert={
     'P_oxtank': Starting_Tank_Pressure,
     'Gamma':gamma,
     'Total_mass_discharged':Starting_Ox_Mass,
-    'Grain_ID':Grain_ID,
     'Grain_OD':Grain_OD,
     'Fuel_mass':Starting_Ox_Mass/OF_ratio,
     'Gas_mass':0,
+    'Nozzle_mass_flow':0,
+    'Chamber_volume':CC_vol, 
+    'total_rocket_mass':dry_mass + Starting_Ox_Mass*(1+1/OF_ratio)
 }
 constant_system_properties={
     'Number_of_Holes':Number_of_Injector_Holes,
@@ -290,7 +349,7 @@ constant_system_properties={
     'Injector_Coefficient_of_Discharge':Injector_Discharge_Coefficient,
     'Ox_tank_volume':Ox_tank_vol,
     'fluid':fluid,
-    'is_flying':False,
+    'is_flying':is_fly,
     'OF':OF_ratio,
     'Fuel_density':fuel_density,
     'Grain_length':Grain_Length,
@@ -299,8 +358,15 @@ constant_system_properties={
     'Nozzle_discharge_ratio':Nozzle_Discharge_Ratio,
     'Throat_diameter':Nozzle_Throat_Diameter,
     'Nozzle_expansion_ratio':Nozzle_Expansion_Ratio,
-    'Nozzle_efficiency':Nozzle_Efficiency
+    'Nozzle_efficiency':Nozzle_Efficiency,
+    'viscosity':viscosity,
+    'Blowing':blowing_number,
+    'a':a,
+    'n':n,
+    'm':m,
+    'dry_mass':dry_mass
 }
+dynamic_system_propert['Grain_ID'] = Grain_ID
 overall_system = {
     'time':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
     'Total_mass_discharged':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
@@ -322,4 +388,4 @@ overall_system = {
 dynamic_system_propert['Oxidizer_properties'] = Oxidizer_Properties(dynamic_system_propert['Ox_tank_temperature'], fluid)
 dynamic_system_propert['Current_liquid_oxidizer_mass'] = (Ox_tank_vol - Starting_Ox_Mass/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])/(1/dynamic_system_propert['Oxidizer_properties']['Density_liquid'] - 1/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])
 dynamic_system_propert['Previous_liquid_oxidizer_mass'] = dynamic_system_propert['Current_liquid_oxidizer_mass'] + 1
-sim_loop(constant_system_properties, dynamic_system_propert, time_propert, overall_system, C)
+system = sim_loop(constant_system_properties, dynamic_system_propert, time_propert, overall_system, C)
