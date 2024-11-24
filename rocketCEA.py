@@ -245,6 +245,7 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
     new_overall_system['OF'] = new_overall_system['OF'][new_overall_system['OF']!=0]
 
     new_overall_system['Thrust'] = ((new_overall_system['Impulse'])/time['Current_time'])
+    '''
     plt.plot(new_overall_system['time'][:len(new_overall_system['Thrust'])], new_overall_system['Thrust'], 'o')
     plt.xlabel('Time (s)')
     plt.ylabel('Thrust (N)')
@@ -266,6 +267,7 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
     plt.title('Combustion Chamber Pressure vs. Time')
     
     plt.show()
+    '''
     print("Max Thrust (N): ", max(new_overall_system['Thrust']))
     print("OF ratio:", np.average(new_overall_system['OF']))
     print("Average Impulse (Ns): ", np.average(new_overall_system['Impulse']))
@@ -375,8 +377,6 @@ def visualize(overallsystem, filename="output.csv"):
     axs[5, 1].plot(overallsystem['time'], overallsystem['Isp'])
     axs[5, 1].set_title('Isp (s)')
 
-    # Adjust layout
-    plt.tight_layout()
     plt.show()
 
 def on_button_click():
