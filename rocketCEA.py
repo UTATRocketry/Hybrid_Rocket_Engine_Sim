@@ -8,48 +8,22 @@ import numpy as np
 import scipy
 import math
 import copy
+import matplotlib.pyplot as plt
+import csv
+import tkinter as tk
+from tkinter import ttk
 
 #The Sim
 #in SI units
-Ox_tank_vol = 0.01396612489262478177383457064491
-Ox_tank_length = 1.7526
-Ox_tank_diameter = (Ox_tank_vol/(math.pi*Ox_tank_length))**0.5
-Aluminum_weight_percent = 0
-Carbon_black_weight_precent = 10
 
+#Im setting all the variables global
+global Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_precent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diamter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight
+global time_propert, dynamic_system_propert, constant_system_properties, overall_system
 
-CC_vol = 0.4826
+def set_global_variables(Ox_tank_vol_var, Ox_tank_length_var, Ox_tank_diameter_var, Aluminum_weight_percent_var, Carbon_black_weight_precent_var, CC_vol_var, Nozzle_Throat_Diameter_var, Nozzle_Expansion_Ratio_var, Nozzle_Efficiency_var, Nozzle_Discharge_Ratio_var, Injector_Hole_Diamter_var, Number_of_Injector_Holes_var, Injector_Discharge_Coefficient_var, c_eff_var, Grain_ID_var, Grain_OD_var, Grain_Length_var, Starting_Tank_Pressure_var, Starting_Chamber_Pressure_var, Starting_Ox_Mass_var, For_flight_var):
+    global Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_precent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diamter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight
+    Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_precent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diamter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight = Ox_tank_vol_var, Ox_tank_length_var, Ox_tank_diameter_var, Aluminum_weight_percent_var, Carbon_black_weight_precent_var, CC_vol_var, Nozzle_Throat_Diameter_var, Nozzle_Expansion_Ratio_var, Nozzle_Efficiency_var, Nozzle_Discharge_Ratio_var, Injector_Hole_Diamter_var, Number_of_Injector_Holes_var, Injector_Discharge_Coefficient_var, c_eff_var, Grain_ID_var, Grain_OD_var, Grain_Length_var, Starting_Tank_Pressure_var, Starting_Chamber_Pressure_var, Starting_Ox_Mass_var, For_flight_var
 
-Nozzle_Throat_Diameter = 0.0954278
-Nozzle_Expansion_Ratio = 1.2
-Nozzle_Efficiency = 0.95
-Nozzle_Discharge_Ratio = 0.9
-
-# Assuming showerhead injector for now
-Injector_Hole_Diamter = 0.0015
-Number_of_Injector_Holes = 60
-Injector_Discharge_Coefficient = 0.55
-
-
-c_eff = 0.9
-Grain_ID = 0.1
-Grain_OD = 0.125
-Grain_Length = 1.5
-
-Starting_Tank_Pressure = 5.516e6
-Starting_Chamber_Pressure = 101325
-Starting_Ox_Mass = 18
-For_flight = 0
-
-#Assuming constant specific heat capacity for now
-gamma = 1.31
-fluid = 'N2O'
-
-time_step = 0.01
-# I Want to try and avoid using this
-simulation_time = 8
-OF_ratio = 4.5
-fuel_density = 1000
 
 def Oxidizer_Properties(T, fluid):
     '''Returns a dictionary of properties for a given oxidizer at a specified temperature in Kelvin. 
@@ -251,75 +225,217 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
     print("Average Combustion Chamber Pressure (psi): ", np.average(new_overall_system['P_chamber'])*145/10e5)
     print("Max Combustion Chamber Pressure (psi): ", max(new_overall_system['P_chamber'])*145/10e5)
     print("Burn Time (s): ", max(new_overall_system['time']))
+    visualize(new_overall_system)
+    
 
-card_str = """
-fuel
-fuel C C(s)       C 1.0      wt%={0}
-t(k)=298.15       h,cal=0.0
+def visualize(overallsystem, filename="output.csv"):
+    # Find the maximum length of all lists in the dictionary
+    max_length = max(len(overallsystem[key]) for key in overallsystem)
 
-fuel AL           AL 1.0     wt%={1}
-t(k)=298.15       h,cal=0.0
+    # Extend all lists to the maximum length with zeros
+    for key in overallsystem:
+        if len(overallsystem[key]) < max_length:
+            overallsystem[key] = np.append(overallsystem[key], [0] * (max_length - len(overallsystem[key])))
+    
+    # Find the index where time becomes 0 again
+    time_array = overallsystem['time']
+    zero_index = np.where(time_array == 0)[0]
+    
+    if len(zero_index) > 1:
+        truncate_index = zero_index[1]  # Second occurrence of 0
+    else:
+        truncate_index = len(time_array)  # No second occurrence, no truncation needed
 
-fuel C22H46       C 22.0  H 46.0     wt%={2}
-t(k)=298.15       h,cal=-39600.0   rho=0.9
-""".format(Carbon_black_weight_precent, Aluminum_weight_percent, 100 - Carbon_black_weight_precent - Aluminum_weight_percent)
-add_new_fuel( 'Paraffin', card_str )
-C = CEA_Obj(fuelName="Paraffin", oxName='N2O')
+    # Truncate all lists in the dictionary at the truncate_index
+    for key in overallsystem:
+        overallsystem[key] = overallsystem[key][:truncate_index]
+    
+    headers = [
+        'Time (s)', 
+        'Total Mass Discharged (kg)', 
+        'Oxidizer Tank Pressure (Pa)', 
+        'Chamber Pressure (Pa)', 
+        'Mass Flow Rate Oxidizer (kg/s)', 
+        'Mass Flow Rate Fuel (kg/s)', 
+        'O/F Ratio', 
+        'Grain ID (m)', 
+        'Nozzle Mass Flow Rate ()', 
+        'Regression Rate (m/s)', 
+        'Fuel Mass (kg)', 
+        'dP (Pa)', 
+        'Isp (s)'
+    ]
+    # Write the data to a CSV file
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+        for i in range(len(overallsystem['time'])):
+            writer.writerow([
+                overallsystem['time'][i], 
+                overallsystem['Total_mass_discharged'][i], 
+                overallsystem['P_oxtank'][i], 
+                overallsystem['P_chamber'][i], 
+                overallsystem['Mass_Flow_Ox'][i], 
+                overallsystem['Mass_Flow_Fuel'][i], 
+                overallsystem['OF'][i], 
+                overallsystem['Grain_ID'][i], 
+                overallsystem['Nozzle_mass_flow'][i], 
+                overallsystem['Regression_rate'][i], 
+                overallsystem['Fuel_mass'][i], 
+                overallsystem['dP'][i], 
+                overallsystem['Isp'][i]
+            ])
+
+    # Plot the data
+    fig, axs = plt.subplots(6, 2, figsize=(15, 20))  # 6 rows, 2 columns
+
+    axs[0, 0].plot(overallsystem['time'], overallsystem['Total_mass_discharged'])
+    axs[0, 0].set_title('Total Mass Discharged (kg)')
+        
+    axs[0, 1].plot(overallsystem['time'], overallsystem['P_oxtank'])
+    axs[0, 1].set_title('Oxidizer Tank Pressure (Pa)')
+
+    axs[1, 0].plot(overallsystem['time'], overallsystem['P_chamber'])
+    axs[1, 0].set_title('Chamber Pressure (Pa)')
+
+    axs[1, 1].plot(overallsystem['time'], overallsystem['Mass_Flow_Ox'])
+    axs[1, 1].set_title('Mass Flow Rate Oxidizer (kg/s)')
+
+    axs[2, 0].plot(overallsystem['time'], overallsystem['Mass_Flow_Fuel'])
+    axs[2, 0].set_title('Mass Flow Rate Fuel (kg/s)')
+
+    axs[2, 1].plot(overallsystem['time'], overallsystem['OF'])
+    axs[2, 1].set_title('O/F Ratio')
+
+    axs[3, 0].plot(overallsystem['time'], overallsystem['Grain_ID'])
+    axs[3, 0].set_title('Grain ID (m)')
+
+    axs[3, 1].plot(overallsystem['time'], overallsystem['Nozzle_mass_flow'])
+    axs[3, 1].set_title('Nozzle Mass Flow Rate ()')
+       
+    axs[4, 0].plot(overallsystem['time'], overallsystem['Regression_rate'])
+    axs[4, 0].set_title('Regression Rate (m/s)')
+
+    axs[4, 1].plot(overallsystem['time'], overallsystem['Fuel_mass'])
+    axs[4, 1].set_title('Fuel Mass (kg)')
+
+    axs[5, 0].plot(overallsystem['time'], overallsystem['dP'])
+    axs[5, 0].set_title('dP (Pa)')
+
+    axs[5, 1].plot(overallsystem['time'], overallsystem['Isp'])
+    axs[5, 1].set_title('Isp (s)')
+
+    # Adjust layout
+    plt.tight_layout()
+    plt.show()
+
+def on_button_click():
+    
+    global time_propert, dynamic_system_propert, constant_system_properties, overall_system
+    '''
+    Ox_tank_vol = 0.01396612489262478177383457064491
+    Ox_tank_length = 1.7526
+    Ox_tank_diameter = (Ox_tank_vol/(math.pi*Ox_tank_length))**0.5
+    Aluminum_weight_percent = 0
+    Carbon_black_weight_precent = 10
 
 
+    CC_vol = 0.4826
 
-time_propert={
-    'Current_time':0,
-    'Change_in_time':time_step,
-    'end_time':simulation_time
-}
-dynamic_system_propert={
-    'Ox_tank_temperature':PropsSI('T', 'P', Starting_Tank_Pressure, 'Q', 1, fluid),
-    'P_chamber': Starting_Chamber_Pressure,
-    'P_oxtank': Starting_Tank_Pressure,
-    'Gamma':gamma,
-    'Total_mass_discharged':Starting_Ox_Mass,
-    'Grain_ID':Grain_ID,
-    'Grain_OD':Grain_OD,
-    'Fuel_mass':Starting_Ox_Mass/OF_ratio,
-    'Gas_mass':0,
-}
-constant_system_properties={
-    'Number_of_Holes':Number_of_Injector_Holes,
-    'Injector_Hole_Size':Injector_Hole_Diamter,
-    'Injector_Coefficient_of_Discharge':Injector_Discharge_Coefficient,
-    'Ox_tank_volume':Ox_tank_vol,
-    'fluid':fluid,
-    'is_flying':False,
-    'OF':OF_ratio,
-    'Fuel_density':fuel_density,
-    'Grain_length':Grain_Length,
-    'Critical_pressure':PropsSI('Pcrit', fluid),
-    'Chamber_volume':CC_vol, 
-    'Nozzle_discharge_ratio':Nozzle_Discharge_Ratio,
-    'Throat_diameter':Nozzle_Throat_Diameter,
-    'Nozzle_expansion_ratio':Nozzle_Expansion_Ratio,
-    'Nozzle_efficiency':Nozzle_Efficiency
-}
-overall_system = {
-    'time':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Total_mass_discharged':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'P_oxtank':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'P_chamber':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Mass_Flow_Ox':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Mass_Flow_Fuel':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'OF':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Grain_ID':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Nozzle_mass_flow':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Fuel_mass':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'dP':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Thrust':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Regression_rate':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
-    'Isp':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+    Nozzle_Throat_Diameter = 0.0954278
+    Nozzle_Expansion_Ratio = 1.2
+    Nozzle_Efficiency = 0.95
+    Nozzle_Discharge_Ratio = 0.9
 
-}
+    # Assuming showerhead injector for now
+    Injector_Hole_Diamter = 0.0015
+    Number_of_Injector_Holes = 60
+    Injector_Discharge_Coefficient = 0.55
 
-dynamic_system_propert['Oxidizer_properties'] = Oxidizer_Properties(dynamic_system_propert['Ox_tank_temperature'], fluid)
-dynamic_system_propert['Current_liquid_oxidizer_mass'] = (Ox_tank_vol - Starting_Ox_Mass/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])/(1/dynamic_system_propert['Oxidizer_properties']['Density_liquid'] - 1/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])
-dynamic_system_propert['Previous_liquid_oxidizer_mass'] = dynamic_system_propert['Current_liquid_oxidizer_mass'] + 1
-sim_loop(constant_system_properties, dynamic_system_propert, time_propert, overall_system, C)
+
+    c_eff = 0.9
+    Grain_ID = 0.1
+    Grain_OD = 0.125
+    Grain_Length = 1.5
+
+    Starting_Tank_Pressure = 5.516e6
+    Starting_Chamber_Pressure = 101325
+    Starting_Ox_Mass = 18
+    For_flight = 0
+    '''
+    #Assuming constant specific heat capacity for now
+    gamma = 1.31
+    fluid = 'N2O'
+
+    time_step = 0.01
+    # I Want to try and avoid using this
+    simulation_time = 8
+    OF_ratio = 4.5
+    fuel_density = 1000
+
+    card_str = """
+    fuel
+    fuel C C(s)       C 1.0      wt%={0}
+    t(k)=298.15       h,cal=0.0
+
+    fuel AL           AL 1.0     wt%={1}
+    t(k)=298.15       h,cal=0.0
+
+    fuel C22H46       C 22.0  H 46.0     wt%={2}
+    t(k)=298.15       h,cal=-39600.0   rho=0.9
+    """.format(Carbon_black_weight_precent, Aluminum_weight_percent, 100 - Carbon_black_weight_precent - Aluminum_weight_percent)
+    add_new_fuel( 'Paraffin', card_str )
+    C = CEA_Obj(fuelName="Paraffin", oxName='N2O')
+    time_propert={
+        'Current_time':0,
+        'Change_in_time':time_step,
+        'end_time':simulation_time
+    }
+    dynamic_system_propert={
+        'Ox_tank_temperature':PropsSI('T', 'P', Starting_Tank_Pressure, 'Q', 1, fluid),
+        'P_chamber': Starting_Chamber_Pressure,
+        'P_oxtank': Starting_Tank_Pressure,
+        'Gamma':gamma,
+        'Total_mass_discharged':Starting_Ox_Mass,
+        'Grain_ID':Grain_ID,
+        'Grain_OD':Grain_OD,
+        'Fuel_mass':Starting_Ox_Mass/OF_ratio,
+        'Gas_mass':0,
+    }
+    constant_system_properties={
+        'Number_of_Holes':Number_of_Injector_Holes,
+        'Injector_Hole_Size':Injector_Hole_Diamter,
+        'Injector_Coefficient_of_Discharge':Injector_Discharge_Coefficient,
+        'Ox_tank_volume':Ox_tank_vol,
+        'fluid':fluid,
+        'is_flying':False,
+        'OF':OF_ratio,
+        'Fuel_density':fuel_density,
+        'Grain_length':Grain_Length,
+        'Critical_pressure':PropsSI('Pcrit', fluid),
+        'Chamber_volume':CC_vol, 
+        'Nozzle_discharge_ratio':Nozzle_Discharge_Ratio,
+        'Throat_diameter':Nozzle_Throat_Diameter,
+        'Nozzle_expansion_ratio':Nozzle_Expansion_Ratio,
+        'Nozzle_efficiency':Nozzle_Efficiency
+    }
+    overall_system = {
+        'time':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Total_mass_discharged':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'P_oxtank':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'P_chamber':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Mass_Flow_Ox':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Mass_Flow_Fuel':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'OF':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Grain_ID':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Nozzle_mass_flow':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Fuel_mass':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'dP':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Thrust':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Regression_rate':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+        'Isp':np.zeros(int(time_propert['end_time']/time_propert['Change_in_time']+1)),
+    }
+    dynamic_system_propert['Oxidizer_properties'] = Oxidizer_Properties(dynamic_system_propert['Ox_tank_temperature'], fluid)
+    dynamic_system_propert['Current_liquid_oxidizer_mass'] = (Ox_tank_vol - Starting_Ox_Mass/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])/(1/dynamic_system_propert['Oxidizer_properties']['Density_liquid'] - 1/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])
+    dynamic_system_propert['Previous_liquid_oxidizer_mass'] = dynamic_system_propert['Current_liquid_oxidizer_mass'] + 1
+    sim_loop(constant_system_properties, dynamic_system_propert, time_propert, overall_system, C)
