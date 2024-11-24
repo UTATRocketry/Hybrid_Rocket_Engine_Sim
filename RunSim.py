@@ -66,13 +66,19 @@ def clear(var):
 def sim():
     global Ox_tank_vol, Ox_tank_length, Ox_tank_diameter
     #Ox_tank_vol = 0.01396612489262478177383457064491
-    Ox_tank_length = 1.7526
-    Ox_tank_diameter = (Ox_tank_vol/(math.pi*Ox_tank_length))**0.5
+    #Ox_tank_length = 1.7526
+    #Ox_tank_diameter = (Ox_tank_vol/(math.pi*Ox_tank_length))**0.5
     Aluminum_weight_percent = 0
     Carbon_black_weight_precent = 10
 
+    dry_mass = 40
+    viscosity = 3.70e-5
+    blowing_number = 15
+    a = 0.000155
+    n = 0.45
+    m = 0
 
-    CC_vol = 0.4826
+    CC_vol = 0.019661
 
     Nozzle_Throat_Diameter = 0.0954278
     Nozzle_Expansion_Ratio = 1.2
@@ -94,7 +100,7 @@ def sim():
     Starting_Chamber_Pressure = 101325
     Starting_Ox_Mass = 18
     For_flight = 0
-    cea.set_global_variables(Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_precent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diamter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight)
+    cea.set_global_variables(Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_precent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diamter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m)
     cea.on_button_click()
 # Create the main window
 root = tk.Tk()
