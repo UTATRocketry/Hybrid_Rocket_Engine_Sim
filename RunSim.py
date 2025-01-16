@@ -167,10 +167,10 @@ frame = ttk.Frame(root, padding="10")
 frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
 # Create a label
-title1 = ttk.Label(frame, text="This is a Sim Trust")
+title1 = ttk.Label(frame, text="This is a Sim Trust", font=("Impact", 18))
 title1.grid(row=0, column=0, columnspan=2, pady=10)
 
-title2 = ttk.Label(frame, text="Tank Dimensions")
+title2 = ttk.Label(frame, text="Tank Dimensions", font = ("Comic Sans MS", 14))
 title2.grid(row=1, column=0, columnspan=2, pady=10)
 
 # Create a tank volume label
@@ -211,7 +211,7 @@ clear_button3.grid(row=4, column=1, padx=5, pady=5)
 compute_button = ttk.Button(frame, text="Find 3rd Var", command=compute_the_third)
 compute_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
 
-title3 = ttk.Label(frame, text="Fuel Characterization")
+title3 = ttk.Label(frame, text="Fuel Characterization", font = ("Comic Sans MS", 14))
 title3.grid(row=6, column=0, columnspan=2, pady=10)
 
 # Fuel Characterization
