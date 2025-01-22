@@ -388,8 +388,12 @@ root = tk.Tk()
 
 root.title("Advanced UI Example")
 
+# Create a Style
+style = ttk.Style()
+style.configure("Custom.TFrame", background="lightblue")  # Set the background color
+
 #Create canvas
-canvas = tk.Canvas(root, height=720, width=1280)
+canvas = tk.Canvas(root, height=720, width=1280, bg = "lightblue")
 canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
 #Create a scrollbar
@@ -402,7 +406,7 @@ canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1*(event.
 
 
 # Create a frame
-frame = ttk.Frame(canvas)
+frame = ttk.Frame(canvas, style= "Custom.TFrame")
 frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 x0 = frame.winfo_screenwidth()/2
 y0 = frame.winfo_screenheight()/2
