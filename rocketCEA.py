@@ -207,9 +207,11 @@ def chamber(staticsystem, dynamicsystem, time, P_atm):
     #Getting the gas mass in the chamber: m = m + dm_g*dt
     dynamicsystem['Gas_mass'] = dynamicsystem['Gas_mass'] + dm_g*time['Change_in_time']
 
-
+    #Calculating the change in pressure: dP = P_c*(dm_g/m - dV/V)
     dP = dynamicsystem['P_chamber']*(dm_g/dynamicsystem['Gas_mass'] - dV/V)
+    #Calculating the new chamber pressure: P_c = P_c + dP*dt
     dynamicsystem['P_chamber'] += dP*time['Change_in_time']
+    #If the chamber pressure is less than the atmospheric pressure, set it to the atmospheric pressure
     if dynamicsystem['P_chamber'] <= P_atm:
         dynamicsystem['P_chamber'] = P_atm
         dynamicsystem['Nozzle_mass_flow'] = 0
@@ -218,14 +220,16 @@ def chamber(staticsystem, dynamicsystem, time, P_atm):
 
 def sim_iteration(overallsystem, staticsystem, dynamicsystem, time, iteration, CEA, P_atm):
     '''ith iteration of the simulation'''
+    #Note to self: CEA works in IMPERIAL!!!
+    #Updating the time
     time['Current_time'] = time['Current_time'] + time['Change_in_time']
+    #Updating the system properties
     cursystem = ox_tank(staticsystem['fluid'], dynamicsystem, P_atm, time, staticsystem, overallsystem)
     cursystem = Regression_Rate(staticsystem, cursystem, time)
-
-    #Note to self: CEA works in IMPERIAL!!!
     cursystem['Cstar'] = CEA.get_Cstar(cursystem['P_chamber']*145/10e5, constant_system_properties['OF'])*c_eff * 0.3048
     cursystem = chamber(staticsystem, cursystem, time, P_atm)
     Isp = CEA.get_Isp(cursystem['P_chamber']*145/10e5, staticsystem['OF'], staticsystem['Nozzle_expansion_ratio'])
+    #Updating the overall system properties
     overallsystem['time'][iteration] = time['Current_time']
     overallsystem['Ox_Mass'][iteration] = cursystem['Ox_Mass']
     overallsystem['P_oxtank'][iteration] = cursystem['P_oxtank']
@@ -244,20 +248,23 @@ def sim_iteration(overallsystem, staticsystem, dynamicsystem, time, iteration, C
 def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
     '''Main function of the sim. Loops through multiple iterations to get the overall system properties'''
     i = 0
+    #Creating a copy of the system properties
     new_static_system = copy.deepcopy(static_system)
     new_dynamic_system = copy.deepcopy(dynamic_system)
     new_overall_system = copy.deepcopy(overallsystem)
+    #Setting the initials of the rocket
     ox_mass = new_dynamic_system['Ox_Mass']
     P_atm = 101325
     v_init = 0
     init_mass = new_dynamic_system['total_rocket_mass']
     height = 0
     while True:
-        
+        #Updating the time
         time['Current_time'] = i*time['Change_in_time']
         i+=1
-
+        #Runs one iteration of the simulation
         new_static_system, new_dynamic_system, new_overall_system, time = sim_iteration(new_overall_system, new_static_system, new_dynamic_system, time, i, CEA, P_atm)
+        #If the fuel is used up, the oxidizer is used up, the max time is reached, or the chamber pressure is less than the atmospheric pressure, break the loop
         if new_dynamic_system['Grain_ID']>=new_dynamic_system['Grain_OD']:
             print("No fuel left")
             break
@@ -270,6 +277,7 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
         elif new_dynamic_system['P_chamber'] <= P_atm:
             print("Burn Complete")
             break
+        #If the rocket is flying, calculate the delta v and the new height and change atomospheric pressure
         if new_static_system['is_flying']:
             new_dynamic_system['total_rocket_mass'] = static_system['dry_mass'] + new_dynamic_system['Ox_Mass'] + new_dynamic_system['Fuel_mass']
             delta_v = new_overall_system['Isp'][i]*9.8*np.log(init_mass/new_dynamic_system['total_rocket_mass']) - 3.986*(10**(14))/(6371000+height)**2*time['Current_time']
@@ -278,7 +286,7 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
             P_atm = 101325*np.exp(0.00011863*height)
         else:
             P_atm = 101325
-
+    #Append non zero values to the overall system properties
     new_overall_system['Impulse'] = new_overall_system['Isp']*ox_mass*(9.8)
     new_overall_system['Mass_Flow_Ox'] = new_overall_system['Mass_Flow_Ox'][new_overall_system['Mass_Flow_Ox']!=0]
     new_overall_system['P_chamber'] = new_overall_system['P_chamber'][new_overall_system['P_chamber']!=0]
@@ -286,29 +294,8 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
     new_overall_system['OF'] = new_overall_system['OF'][new_overall_system['OF']!=0]
 
     new_overall_system['Thrust'] = ((new_overall_system['Impulse'])/time['Current_time'])
-    '''
-    plt.plot(new_overall_system['time'][:len(new_overall_system['Thrust'])], new_overall_system['Thrust'], 'o')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Thrust (N)')
-    plt.title('Thrust vs. Time')
     
-    plt.plot(new_overall_system['time'][:len(new_overall_system['Mass_Flow_Ox'])], new_overall_system['Mass_Flow_Ox'], 'o')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Oxidizer Mass Flow (kg/s)')
-    plt.title('Oxidizer Mass Flow vs. Time')
-    
-    plt.plot(new_overall_system['time'][:len(new_overall_system['OF'])], new_overall_system['OF'], 'o')
-    plt.xlabel('Time (s)')
-    plt.ylabel('OF Ratio')
-    plt.title('OF Ratio vs. Time')
-    
-    plt.plot(new_overall_system['time'][:len(new_overall_system['P_chamber'])], new_overall_system['P_chamber']*145/10e5, 'o')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Combustion Chamber Pressure (Psi)')
-    plt.title('Combustion Chamber Pressure vs. Time')
-    
-    plt.show()
-    '''
+    #Prints the system properties
     print("Max Thrust (N): ", max(new_overall_system['Thrust']))
     print("OF ratio:", np.average(new_overall_system['OF']))
     print("Average Impulse (Ns): ", np.average(new_overall_system['Impulse']))
@@ -318,6 +305,7 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
     print("Average Combustion Chamber Pressure (psi): ", np.average(new_overall_system['P_chamber'])*145/10e5)
     print("Max Combustion Chamber Pressure (psi): ", max(new_overall_system['P_chamber'])*145/10e5)
     print("Burn Time (s): ", max(new_overall_system['time']))
+    #
     visualize(new_overall_system)
     
 
