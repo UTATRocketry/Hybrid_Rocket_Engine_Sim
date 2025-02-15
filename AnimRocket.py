@@ -2,73 +2,102 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from IPython.display import display, HTML
-
-# Initialize figure
-fig, ax = plt.subplots(figsize=(5, 8))
-ax.set_xlim(-2, 2)  # Expand for fuel meters
-ax.set_ylim(0, 10)  # Rocket launch height
-ax.set_xlabel("Rocket")
-ax.set_ylabel("Altitude")
-
-# Rocket body
-rocket, = ax.plot([], [], marker="^", markersize=20, color="red", label="Rocket")
-
-# Exhaust trail
-trail_x, trail_y = [], []
-trail, = ax.plot([], [], "orange", lw=2, alpha=0.6)
-
-# Fuel & Oxidizer meters (vertical bars)
-fuel_meter, = ax.plot([1.6, 1.6], [0, 10], "g", lw=8, label="Fuel")  # Green bar
-oxidizer_meter, = ax.plot([1.5, 1.5], [0, 10], "b", lw=8, label="Oxidizer")  # Blue bar
-
+import rocketCEA
+import math
+dry_mass = 40
 # Physics parameters
 g = 9.81  # Gravity (m/s^2)
-thrust = 30  # Thrust (m/s^2)
-dt = 0.1  # Time step
+dt = 0.01  # Time step
 velocity = 0  # Initial velocity
-position = 0  # Initial position
+y_position = 0  # Initial position
+x_position = 0
+max_height = 100
+# Exhaust trail
+trail_x, trail_y = [], []
+def animation(new_system):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.animation as animation
+    from IPython.display import display, HTML
+    import rocketCEA
+    import math
+    # Initialize figure
+    fig, ax = plt.subplots(figsize=(5, 8))
+    ax.set_xlim(-2, 2)  # Expand for fuel meters
+    ax.set_ylim(0, 10)  # Rocket launch height
+    ax.set_xlabel("Rocket")
+    ax.set_ylabel("Altitude")
+    trail, = ax.plot([], [], "orange", lw=2, alpha=0.6)
 
-# Fuel & Oxidizer levels
-fuel = 10  # Start full (max height 10)
-oxidizer = 10
+    # Rocket body
+    rocket, = ax.plot([], [], marker="^", markersize=20, color="red", label="Rocket")
+    marker, = ax.plot([0, 0], [10, 10], marker="X", markersize=20, color="black", label="max_height")
 
-def update(frame):
-    global velocity, position, fuel, oxidizer, trail_x, trail_y
 
-    # Newton's second law (Thrust - Gravity)
-    acceleration = thrust - g
-    velocity += acceleration * dt
-    position += velocity * dt
 
-    # Decrease fuel & oxidizer as rocket moves
-    fuel = max(0, fuel - 0.1)  # Simulating fuel burn
-    oxidizer = max(0, oxidizer - 0.12)  # Oxidizer burns slightly faster
+    # Fuel & Oxidizer meters (vertical bars)
+    fuel_meter, = ax.plot([1.6, 1.6], [0, 4.5], "g", lw=8, label="Fuel")  # Green bar
+    oxidizer_meter, = ax.plot([1.5, 1.5], [0, 10], "b", lw=8, label="Oxidizer")  # Blue bar
 
-    #Dynamically adjust Y-axis limits
-    ax.set_ylim(0, max(10, position + 2))
 
-    # Reset when rocket reaches the top
-    if position > 100:
-        ani.event_source.stop()
 
-    # Update rocket position
-    rocket.set_data(0, position)
 
-    # Update exhaust trail
-    trail_x.append(0)
-    trail_y.append(position - 0.5)  # Slightly below rocket
-    if len(trail_y) > 15:  # Keep trail short
-        trail_x.pop(0)
-        trail_y.pop(0)
+
+    new_system = rocketCEA.on_button_click()
     
-    trail.set_data(trail_x, trail_y)
+    title = ax.text(0.5,0.85, y_position, bbox={'facecolor':'w', 'alpha':0.5, 'pad':5}, transform=ax.transAxes, ha="center")
+    # Fuel & Oxidizer levels
 
-    # Update fuel & oxidizer meters
-    fuel_meter.set_data([1.6, 1.6], [0, fuel])
-    oxidizer_meter.set_data([1.5, 1.5], [0, oxidizer])
+    wind_speed = 10
+    def update(frame):
+        global velocity, y_position, fuel, oxidizer, trail_x, trail_y, x_position, max_height
+        fuel = new_system['Fuel_mass']  # Start full (max height 10)
+        oxidizer = new_system['Ox_Mass']
+        thrust =new_system['Thrust']  # Thrust (m/s^2)
 
-    return rocket, trail, fuel_meter, oxidizer_meter
+        if frame<len(thrust):
+            thrust_acc = thrust[frame]/(dry_mass+oxidizer[frame]+fuel[frame])
+        else:
+            thrust_acc = 0
+        # Newton's second law (Thrust - Gravity)
+        acceleration = thrust_acc - g
+        velocity += acceleration * dt
+        y_position += velocity * dt
+        x_position += wind_speed * dt
+        # Decrease fuel & oxidizer as rocket moves
+        if frame<len(fuel):
+            fuel_new = fuel[frame]  # Simulating fuel burn
+        else:
+            fuel_new = 0
 
-# Create looping animation
-ani = animation.FuncAnimation(fig, update, frames=100, interval=50, blit=False)
-ani.save("rocket_animation.gif", writer="pillow")
+        if frame<len(oxidizer):
+            oxidizer_new = oxidizer[frame]  # Oxidizer burns slightly faster
+        else:
+            oxidizer_new = 0
+        #Dynamically adjust Y-axis limits
+        ax.set_xlim(x_position - 10, x_position + 10)
+        ax.set_ylim(max(0, y_position - 10), max(10, y_position + 2))
+
+
+        # Update rocket position
+        rocket.set_data(x_position, y_position)
+        title.set_text("Current Position: {}. Max position: {}".format(round(y_position, 1), max_height))
+        marker.set_data(x_position, min(max_height, max(10, y_position + 2)))
+        # Update exhaust trail
+        trail_x.append(x_position)
+        trail_y.append(y_position - 0.5)  # Slightly below rocket
+        if len(trail_y) > 15:  # Keep trail short
+            trail_x.pop(0)
+            trail_y.pop(0)
+        
+        trail.set_data(trail_x, trail_y)
+
+        # Update fuel & oxidizer meters
+        fuel_meter.set_data([max(10, x_position+ 10)-0.5, max(10, x_position+ 10)-0.5], [max(0, y_position - 10), fuel_new+max(0, y_position - 10)])
+        oxidizer_meter.set_data([max(10, x_position+10)-0.1, max(10, x_position+10)-0.1], [max(0, y_position - 10), oxidizer_new+max(0, y_position - 10)])
+
+        return rocket, trail, fuel_meter, oxidizer_meter
+
+    # Create looping animation
+    ani = animation.FuncAnimation(fig, update, frames=400, interval=50, blit=False)
+    ani.save("rocket_animation.gif", writer="pillow")
