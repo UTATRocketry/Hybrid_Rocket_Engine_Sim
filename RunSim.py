@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 import numpy as np
 import math
-
+import AnimRocket
 global Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, Starting_Tank_Pressure, Starting_Ox_Mass, Starting_Chamber_Pressure, CC_vol, Grain_ID, Grain_OD, Grain_Length, blowing_number, a, n, m, Injector_Hole_Diameter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, c_eff, dry_mass, viscosity, For_flight
 
 #Initializes the variables
@@ -380,7 +380,8 @@ def sim():
     # For_flight = 0
     
     cea.set_global_variables(Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diameter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m)
-    cea.on_button_click()
+    new_syst = cea.on_button_click()
+    AnimRocket.animation(new_syst)
 
     
 # Create the main window
