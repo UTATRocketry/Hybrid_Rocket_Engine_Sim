@@ -307,6 +307,7 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
     print("Burn Time (s): ", max(new_overall_system['time']))
     #
     visualize(new_overall_system)
+    return new_overall_system
     
 
 def visualize(overallsystem, filename="output.csv"):
@@ -503,3 +504,4 @@ def on_button_click():
     dynamic_system_propert['Current_liquid_oxidizer_mass'] = (Ox_tank_vol - Starting_Ox_Mass/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])/(1/dynamic_system_propert['Oxidizer_properties']['Density_liquid'] - 1/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])
     dynamic_system_propert['Previous_liquid_oxidizer_mass'] = dynamic_system_propert['Current_liquid_oxidizer_mass'] + 1
     system = sim_loop(constant_system_properties, dynamic_system_propert, time_propert, overall_system, C)
+    return system
