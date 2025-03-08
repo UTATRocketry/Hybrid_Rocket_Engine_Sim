@@ -16,12 +16,12 @@ from tkinter import ttk
 #in SI units
 
 #Im setting all the variables global
-global Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diamter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m
+global Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diameter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m
 global time_propert, dynamic_system_propert, constant_system_properties, overall_system
 
-def set_global_variables(Ox_tank_vol_var, Ox_tank_length_var, Ox_tank_diameter_var, Aluminum_weight_percent_var, Carbon_black_weight_percent_var, CC_vol_var, Nozzle_Throat_Diameter_var, Nozzle_Expansion_Ratio_var, Nozzle_Efficiency_var, Nozzle_Discharge_Ratio_var, Injector_Hole_Diamter_var, Number_of_Injector_Holes_var, Injector_Discharge_Coefficient_var, c_eff_var, Grain_ID_var, Grain_OD_var, Grain_Length_var, Starting_Tank_Pressure_var, Starting_Chamber_Pressure_var, Starting_Ox_Mass_var, For_flight_var, dry_mass_var, viscosity_var, blowing_number_var, a_var, n_var, m_var):
-    global Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diamter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m
-    Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diamter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m = Ox_tank_vol_var, Ox_tank_length_var, Ox_tank_diameter_var, Aluminum_weight_percent_var, Carbon_black_weight_percent_var, CC_vol_var, Nozzle_Throat_Diameter_var, Nozzle_Expansion_Ratio_var, Nozzle_Efficiency_var, Nozzle_Discharge_Ratio_var, Injector_Hole_Diamter_var, Number_of_Injector_Holes_var, Injector_Discharge_Coefficient_var, c_eff_var, Grain_ID_var, Grain_OD_var, Grain_Length_var, Starting_Tank_Pressure_var, Starting_Chamber_Pressure_var, Starting_Ox_Mass_var, For_flight_var, dry_mass_var, viscosity_var, blowing_number_var, a_var, n_var, m_var
+def set_global_variables(Ox_tank_vol_var, Ox_tank_length_var, Ox_tank_diameter_var, Aluminum_weight_percent_var, Carbon_black_weight_percent_var, CC_vol_var, Nozzle_Throat_Diameter_var, Nozzle_Expansion_Ratio_var, Nozzle_Efficiency_var, Nozzle_Discharge_Ratio_var, Injector_Hole_Diameter_var, Number_of_Injector_Holes_var, Injector_Discharge_Coefficient_var, c_eff_var, Grain_ID_var, Grain_OD_var, Grain_Length_var, Starting_Tank_Pressure_var, Starting_Chamber_Pressure_var, Starting_Ox_Mass_var, For_flight_var, dry_mass_var, viscosity_var, blowing_number_var, a_var, n_var, m_var):
+    global Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diameter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m
+    Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diameter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m = Ox_tank_vol_var, Ox_tank_length_var, Ox_tank_diameter_var, Aluminum_weight_percent_var, Carbon_black_weight_percent_var, CC_vol_var, Nozzle_Throat_Diameter_var, Nozzle_Expansion_Ratio_var, Nozzle_Efficiency_var, Nozzle_Discharge_Ratio_var, Injector_Hole_Diameter_var, Number_of_Injector_Holes_var, Injector_Discharge_Coefficient_var, c_eff_var, Grain_ID_var, Grain_OD_var, Grain_Length_var, Starting_Tank_Pressure_var, Starting_Chamber_Pressure_var, Starting_Ox_Mass_var, For_flight_var, dry_mass_var, viscosity_var, blowing_number_var, a_var, n_var, m_var
 
 def Oxidizer_Properties(T, fluid):
     '''Returns a dictionary of properties for a given oxidizer at a specified temperature in Kelvin. 
@@ -48,8 +48,6 @@ def find_temp_for_vapor_pressure(T, P_target, fluid):
     vapor_pressure = PropsSI('P', 'T', T, 'Q', 0, fluid)
     return vapor_pressure - P_target
 
-
-
 def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_propert, total_system_properties):
     '''Models the pressure, temperature, and mass flow through the ox tank at a given time step given the oxidizer 
     and the system properties at the previous time step'''
@@ -63,7 +61,7 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
     
     #Assuming isentropic flow
     
-    #Mach number at the combustion chamber and at the atmosphere 
+    #Mach number at the combustion chamber: M = (gamma*R*T)^0.5
     M_combust_chamb = (ox_propert['Compressibility']*system_prev['Gamma']*R*(system_prev['Ox_tank_temperature'])*(system_prev['P_chamber']/system_prev['P_oxtank'])**((system_prev['Gamma']-1)/system_prev['Gamma']))**0.5
     #Mach number at the atmosphere
     M_atmosphere = (ox_propert['Compressibility']*system_prev['Gamma']*R*(system_prev['Ox_tank_temperature'])*(atmospheric_pressure/system_prev['P_oxtank'])**((system_prev['Gamma']-1)/system_prev['Gamma']))**0.5
@@ -76,7 +74,6 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
     #Pressure difference should be positive
     if dP < 0:
         dP = 0
-        
     #If the simulation is still running (or user put 0 as end time), calculate the mass flow rate
     if time_propert['end_time'] == 0 or time_propert['Current_time'] <= time_propert['end_time']:
         if system_prev['Current_liquid_oxidizer_mass'] == 0:
@@ -134,7 +131,7 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
         tolerance = 1e-6 #Tolerance
         T_initial = current_system['Ox_tank_temperature'] #Initial temperature
         P_initial = current_system['P_oxtank'] #Initial pressure
-        #Using the secant method/bisection method to solve for the new compressibility factor
+        #Using the bisection method to solve for the new compressibility factor
         #We are guessing the compressibility factor using the temp of the tank, through coolprop + the relations
         #Relation used for the compressibility factor: Z = p / (rho RT)
         while epsilon >= tolerance:
@@ -460,7 +457,7 @@ def on_button_click():
     }
     constant_system_properties={
         'Number_of_Holes':Number_of_Injector_Holes,
-        'injector_hole_dia':Injector_Hole_Diamter,
+        'injector_hole_dia':Injector_Hole_Diameter,
         'Injector_Coefficient_of_Discharge':Injector_Discharge_Coefficient,
         'Ox_tank_volume':Ox_tank_vol,
         'fluid':fluid,

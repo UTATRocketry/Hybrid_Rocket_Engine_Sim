@@ -381,7 +381,7 @@ def sim():
     
     cea.set_global_variables(Ox_tank_vol, Ox_tank_length, Ox_tank_diameter, Aluminum_weight_percent, Carbon_black_weight_percent, CC_vol, Nozzle_Throat_Diameter, Nozzle_Expansion_Ratio, Nozzle_Efficiency, Nozzle_Discharge_Ratio, Injector_Hole_Diameter, Number_of_Injector_Holes, Injector_Discharge_Coefficient, c_eff, Grain_ID, Grain_OD, Grain_Length, Starting_Tank_Pressure, Starting_Chamber_Pressure, Starting_Ox_Mass, For_flight, dry_mass, viscosity, blowing_number, a, n, m)
     new_syst = cea.on_button_click()
-    AnimRocket.animation(new_syst)
+    AnimRocket.anim(new_syst)
 
     
 # Create the main window
@@ -415,7 +415,7 @@ canvas.create_window((x0,y0), window=frame, anchor = "center")
 #canvas.create_window((0,0), window=frame, anchor="nw")
 
 # Main Title
-title1 = ttk.Label(frame, text="This is a Sim Trust", font=("Impact", 18))
+title1 = ttk.Label(frame, text="Hybrid Propulsion Rocket Simulation", font=("Impact", 18))
 title1.grid(row=0, column=0, columnspan=3, pady=10)
 
 #Ox Tank Dimensions & Properties Title
@@ -423,7 +423,7 @@ title2 = ttk.Label(frame, text="Ox Tank Dimensions & Properties", font = ("Comic
 title2.grid(row=1, column=0, columnspan=3, pady=10)
 
 # Create a tank volume label
-tank_vol_label = ttk.Label(frame, text="Tank Volume")
+tank_vol_label = ttk.Label(frame, text="Tank Volume [m^3]")
 tank_vol_label.grid(row=2, column=0, sticky='w')
 # Create a StringVar to track the value of the entry widget
 tank_vol_var = tk.StringVar()
@@ -437,7 +437,7 @@ clear_button1 = ttk.Button(frame, text="Clear", command=lambda: clear("vol"))
 clear_button1.grid(row=2, column=2)
 
 # For Tank length
-tank_len_label = ttk.Label(frame, text="Tank Length")
+tank_len_label = ttk.Label(frame, text="Tank Length [m]")
 tank_len_label.grid(row=3, column=0, sticky='w')
 tank_len_var = tk.StringVar()
 tank_len_var.trace_add("write", on_value_changed_Ox_tank)
@@ -447,7 +447,7 @@ clear_button2 = ttk.Button(frame, text="Clear", command=lambda: clear("len"))
 clear_button2.grid(row=3, column=2)
 
 # For Tank Diameter
-tank_dia_label = ttk.Label(frame, text="Tank Diameter")
+tank_dia_label = ttk.Label(frame, text="Tank Diameter [m]")
 tank_dia_label.grid(row=4, column=0, sticky='w')
 tank_dia_var = tk.StringVar()
 tank_dia_var.trace_add("write", on_value_changed_Ox_tank)
