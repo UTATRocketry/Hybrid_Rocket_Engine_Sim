@@ -96,24 +96,24 @@ def create_entry(parent, row, label_text, var_name, toggle):
     
         var = tk.StringVar(value=str(sim_vars[var_name]))
         entry = ttk.Entry(parent, width=20, textvariable=var)
-        entry.grid(row=row, column=1)
+        entry.grid(row=row, column=1, padx=10)
 
         # Bind event instead of using trace_add
         entry.bind("<KeyRelease>", lambda event: update_value(var_name, var, 0))
     
         clear_btn = ttk.Button(parent, text="Clear", command=lambda: clear(entry, var_name))
-        clear_btn.grid(row=row, column=2)
+        clear_btn.grid(row=row, column=2, padx=10)
         return entry
     elif (toggle == 1):
         # Fuel Weight Percent Characterization
         weight_percent = tk.StringVar(value = str(sim_vars[var_name]))
         fuel_entry = ttk.Entry(parent, width=20, textvariable=weight_percent)
-        fuel_entry.grid(row=row, column=1)
+        fuel_entry.grid(row=row, column=1, padx=10)
         
         fuel_entry.bind("<KeyRelease>", lambda event: update_value(var_name, weight_percent, 1))
         
         clear_btn = ttk.Button(frame, text="Clear", command=lambda: clear(fuel_entry, "fuel"))
-        clear_btn.grid(row=row, column=2)
+        clear_btn.grid(row=row, column=2, padx=10)
         # Creates options for the user to select
         options = ["Aluminum", "Carbon Black"]
         # Creates a variable to hold the selected option
@@ -180,22 +180,30 @@ y0 = frame.winfo_screenheight()/2
 canvas.create_window((x0,y0), window=frame, anchor = "center")
 #canvas.create_window((0,0), window=frame, anchor="nw")
 
+titles_vars = ["Ox Tank Length [m]", "Ox Tank Diameter [m]", "Starting Tank Pressure [Pa]", "Starting Ox Mass [kg]", 
+          "Starting Chamber Pressure [Pa]", "CC Volume [m^3]", "Grain ID [m]", "Grain OD [m]", "Grain Length [m]",
+          "Blowing Number", "a", "n", "m", "Injector Hole Diameter [m]", "Number of Injector Holes",
+          "Injector Discharge Coefficient", "Nozzle Throat Diameter [m]", "Nozzle Expansion Ratio", "Nozzle Efficiency",
+          "Nozzle Discharge Ratio", "c_eff", "Dry Mass [kg]", "Viscosity [Pa*s]", "For Flight"]
+
 # Create entries dynamically
 entries = {}
 row_counter = 0
+title_counter = 0
 for key in sim_vars.keys():
     if key in exception_vars:
         continue
     else:
         while row_counter in {0, 1, 6, 9, 10, 11, 19, 23}:
             row_counter += 1
-        
-        entries[key] = create_entry(frame, row_counter, key.replace("_", " ").title(), key, 0)
+        entries[key] = create_entry(frame, row_counter, titles_vars[title_counter], key, 0)
+        title_counter += 1
         row_counter += 1
-        
+
+
 
 for title, font, size, row in titles:
-    ttk.Label(frame, text=title, font=(font, size)).grid(row=row, column=0, columnspan=2, pady=10)
+    ttk.Label(frame, text=title, font=(font, size)).grid(row=row, column=0, columnspan=3, pady=10)
     
 
 fuel_entry = create_entry(frame, 10, " ", "Aluminum_weight_percent", 1)
