@@ -1,10 +1,12 @@
-import glob
 import rocketCEA as cea
 import tkinter as tk
 from tkinter import ttk
+from tkinter import scrolledtext
 import numpy as np
 import math
 import AnimRocket
+import os
+import sys
 global sim_vars, exception_vars
 
 # Define simulation variables in a dictionary
@@ -149,7 +151,20 @@ titles = [
     ("Injector Dimensions","Comic Sans MS", 14, 19),
     ("Nozzle Dimensions and Characterization","Comic Sans MS", 14, 23)
 ]
-    
+
+
+
+class ConsoleRedirect:
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+
+    def write(self, message):
+        self.text_widget.insert(tk.END, message)
+        self.text_widget.see(tk.END)  # Auto-scroll to the end
+
+    def flush(self):
+        pass  # Required for compatibility with sys.stdout
+
 # Create the main window
 root = tk.Tk()
 
@@ -178,7 +193,14 @@ frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 x0 = frame.winfo_screenwidth()/2
 y0 = frame.winfo_screenheight()/2
 canvas.create_window((x0,y0), window=frame, anchor = "center")
-#canvas.create_window((0,0), window=frame, anchor="nw")
+
+# Console output Text widget
+console_output = scrolledtext.ScrolledText(frame, wrap=tk.WORD, height=10, state='normal')
+console_output.grid(row=1, column=3, rowspan= 30, padx=[100,0], pady=0, sticky="nsew")
+
+# Redirect stdout and stderr
+sys.stdout = ConsoleRedirect(console_output)
+sys.stderr = ConsoleRedirect(console_output)
 
 titles_vars = ["Ox Tank Length [m]", "Ox Tank Diameter [m]", "Starting Tank Pressure [Pa]", "Starting Ox Mass [kg]", 
           "Starting Chamber Pressure [Pa]", "CC Volume [m^3]", "Grain ID [m]", "Grain OD [m]", "Grain Length [m]",
