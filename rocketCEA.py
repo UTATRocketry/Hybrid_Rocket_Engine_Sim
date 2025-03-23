@@ -502,3 +502,17 @@ def on_button_click():
     dynamic_system_propert['Previous_liquid_oxidizer_mass'] = dynamic_system_propert['Current_liquid_oxidizer_mass'] + 1
     system = sim_loop(constant_system_properties, dynamic_system_propert, time_propert, overall_system, C)
     return system
+
+def required_massflow(impulse, thrust, p_chamber, OF_ratio, Nozzle_expansion_ratio, CEA):
+    burn_time = impulse/thrust
+    specific_impulse = CEA.get_Isp(p_chamber, OF_ratio, Nozzle_expansion_ratio)
+    mass = impulse/(specific_impulse*9.8)
+    mass_flow = mass/burn_time
+    return mass_flow
+
+def required_thrust(p_chamber, OF_ratio, Nozzle_expansion_ratio, CEA, oxmass, burntime):
+    Isp = CEA.get_Isp(p_chamber, OF_ratio, eps = Nozzle_expansion_ratio)
+    impulse = Isp*(oxmass*(OF_ratio+1)/OF_ratio)*9.8
+    thrust = impulse/burntime
+    return thrust
+
