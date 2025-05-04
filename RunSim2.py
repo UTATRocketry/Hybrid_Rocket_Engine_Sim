@@ -11,15 +11,15 @@ global sim_vars, exception_vars
 
 # Define simulation variables in a dictionary
 sim_vars = {
-    "Ox_tank_length": 1.7526, "Ox_tank_diameter": 0.10072832596729638, "Ox_tank_vol": 0.013966124892624783,
-    "Starting_Tank_Pressure": 5.516e6, "Starting_Ox_Mass": 18,
-    "Starting_Chamber_Pressure": 101325, "CC_vol": 0.019661,
-    "Grain_ID": 0.1, "Grain_OD": 0.125, "Grain_Length": 1.5,
+    "Ox_tank_length": 1.000, "Ox_tank_diameter": 0.1143, "Ox_tank_vol": 0.010261,
+    "Starting_Tank_Pressure": 5.516e6, "Starting_Ox_Mass": 7.726,
+    "Starting_Chamber_Pressure": 101325, "CC_vol": 0.00953231, #0.929m length, 0.1143m diameter
+    "Grain_ID": 0.09, "Grain_OD": 0.1143, "Grain_Length": 0.929,
     "blowing_number": 15, "a": 0.000155, "n": 0.45, "m": 0,
-    "Injector_Hole_Diameter": 0.0015, "Number_of_Injector_Holes": 60,
+    "Injector_Hole_Diameter": 0.0015, "Number_of_Injector_Holes": 23,
     "Injector_Discharge_Coefficient": 0.55, "Nozzle_Throat_Diameter": 0.0954,
-    "Nozzle_Expansion_Ratio": 1.2, "Nozzle_Efficiency": 0.95,
-    "Nozzle_Discharge_Ratio": 0.9, "c_eff": 0.9,
+    "Nozzle_Expansion_Ratio": 4, "Nozzle_Efficiency": 0.95,
+    "Nozzle_Discharge_Ratio": 1, "c_eff": 0.9,
     "dry_mass": 40, "viscosity": 3.70e-5, "For_flight": 0,
     "Aluminum_weight_percent": 0, "Carbon_black_weight_percent": 10
 }
@@ -155,15 +155,19 @@ titles = [
 
 
 class ConsoleRedirect:
-    def __init__(self, text_widget):
+    def __init__(self, text_widget, original_std):
         self.text_widget = text_widget
+        self.original_std = original_std
 
     def write(self, message):
+        self.original_std.write(message)  # Print to the original stdout
+        self.original_std.flush()  # Flush the original stdout
+
         self.text_widget.insert(tk.END, message)
         self.text_widget.see(tk.END)  # Auto-scroll to the end
 
     def flush(self):
-        pass  # Required for compatibility with sys.stdout
+        self.original_std.flush()
 
 # Create the main window
 root = tk.Tk()
@@ -199,8 +203,10 @@ console_output = scrolledtext.ScrolledText(frame, wrap=tk.WORD, height=10, state
 console_output.grid(row=1, column=3, rowspan= 30, padx=[100,0], pady=0, sticky="nsew")
 
 # Redirect stdout and stderr
-sys.stdout = ConsoleRedirect(console_output)
-sys.stderr = ConsoleRedirect(console_output)
+original_stdout = sys.stdout
+original_stderr = sys.stderr
+sys.stdout = ConsoleRedirect(console_output, original_stdout)
+sys.stderr = ConsoleRedirect(console_output, original_stderr)
 
 titles_vars = ["Ox Tank Length [m]", "Ox Tank Diameter [m]", "Starting Tank Pressure [Pa]", "Starting Ox Mass [kg]", 
           "Starting Chamber Pressure [Pa]", "CC Volume [m^3]", "Grain ID [m]", "Grain OD [m]", "Grain Length [m]",
@@ -221,8 +227,6 @@ for key in sim_vars.keys():
         entries[key] = create_entry(frame, row_counter, titles_vars[title_counter], key, 0)
         title_counter += 1
         row_counter += 1
-
-
 
 for title, font, size, row in titles:
     ttk.Label(frame, text=title, font=(font, size)).grid(row=row, column=0, columnspan=3, pady=10)

@@ -48,7 +48,7 @@ def find_temp_for_vapor_pressure(T, P_target, fluid):
     vapor_pressure = PropsSI('P', 'T', T, 'Q', 0, fluid)
     return vapor_pressure - P_target
 
-def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_propert, total_system_properties):
+def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_propert, total_system_properties, verbose):
     '''Models the pressure, temperature, and mass flow through the ox tank at a given time step given the oxidizer 
     and the system properties at the previous time step'''
     current_system = copy.deepcopy(system_prev)
@@ -63,33 +63,45 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
     
     #Mach number at the combustion chamber: M = (gamma*R*T)^0.5
     M_combust_chamb = (ox_propert['Compressibility']*system_prev['Gamma']*R*(system_prev['Ox_tank_temperature'])*(system_prev['P_chamber']/system_prev['P_oxtank'])**((system_prev['Gamma']-1)/system_prev['Gamma']))**0.5
+
     #Mach number at the atmosphere
     M_atmosphere = (ox_propert['Compressibility']*system_prev['Gamma']*R*(system_prev['Ox_tank_temperature'])*(atmospheric_pressure/system_prev['P_oxtank'])**((system_prev['Gamma']-1)/system_prev['Gamma']))**0.5
     
+    verbose_print(verbose, "Mach number at the combustion chamber:", M_combust_chamb, time_propert['Current_time'])
+    verbose_print(verbose, "Mach number at the atmosphere:", M_atmosphere, time_propert['Current_time'])
     # In a closed pipe the max Mach number the fluid can reach is 1
     if M_combust_chamb > 1:
         M_combust_chamb = 1
+        verbose_print(verbose, "Mach number at the combustion chamber is greater than 1, set to 1:", M_combust_chamb, time_propert['Current_time'])
     if M_atmosphere > 1:
         M_atmosphere = 1
+        verbose_print(verbose, "Mach number at the atmosphere is greater than 1, set to 1:", M_atmosphere, time_propert['Current_time'])
     #Pressure difference should be positive
     if dP < 0:
         dP = 0
+        verbose_print(verbose, "Pressure difference is negative, set to 0:", dP, time_propert['Current_time'])
     #If the simulation is still running (or user put 0 as end time), calculate the mass flow rate
     if time_propert['end_time'] == 0 or time_propert['Current_time'] <= time_propert['end_time']:
         if system_prev['Current_liquid_oxidizer_mass'] == 0:
             # Calculate the mass flow rate using the choked flow equation: m\dot = C_d*A*P/sqrt(T) * sqrt(gamma/(Z*R)) * M * (1+(gamma-1)/2*M^2)^((-gamma-1)/(2*(gamma-1)))
             current_system['Mass_Flow_Ox'] = (const_propert['Injector_Coefficient_of_Discharge']*math.pi*(const_propert['injector_hole_dia']/2)**2*const_propert['Number_of_Holes']*current_system['P_oxtank']/current_system['Oxidizer_properties']['Temperature']**0.5)*(system_prev['Gamma']/(current_system['Oxidizer_properties']['Compressibility']*R))**0.5*M_combust_chamb*(1+(system_prev['Gamma']-1)/2*M_combust_chamb**2)**((-system_prev['Gamma']-1)/(2*(system_prev['Gamma']-1)))
+            verbose_print(verbose, "Liquid ox mass is 0, mass flow rate using choked flow equation (No Bernoulli):", current_system['Mass_Flow_Ox'], time_propert['Current_time'])
         else:
             # Calculate the mass flow rate using the choked flow equation but with Bernoulli assumption: m\dot = C_d*A*sqrt(2*rho*P)
             ########################
             current_system['Mass_Flow_Ox'] = (const_propert['Injector_Coefficient_of_Discharge']*math.pi*(const_propert['injector_hole_dia']/2)**2*const_propert['Number_of_Holes']*(2*current_system['Oxidizer_properties']['Density_liquid']*dP)**0.5)
+            verbose_print(verbose, "Mass flow rate using choked flow equation with Bernoulli assumption:", current_system['Mass_Flow_Ox'], time_propert['Current_time'])
     #If the simulation is over, set the mass flow rate to 0
     elif time_propert['end_time'] > 0 and time_propert['Current_time'] > time_propert['end_time']:
         current_system['Mass_Flow_Ox'] = 0
+        verbose_print(verbose, "Simulation is over, mass flow rate set to 0:", current_system['Mass_Flow_Ox'], time_propert['Current_time'])
     #Calculate the mass of oxidizer discharged: m = m\dot * dt
     mass_discharged = current_system['Mass_Flow_Ox']*time_propert['Change_in_time']
     #Sets new Ox mass: m = m - m
     current_system['Ox_Mass'] = system_prev['Ox_Mass'] - mass_discharged
+
+    verbose_print(verbose, "Oxidizer mass discharged:", mass_discharged, time_propert['Current_time'])
+    verbose_print(verbose, "New Oxidizer mass:", current_system['Ox_Mass'], time_propert['Current_time'])
     
     #If the mass of the oxidizer is getting discharged and both greater than 0, calculate the new temperature and pressure of the tank
     if system_prev['Current_liquid_oxidizer_mass'] < system_prev['Previous_liquid_oxidizer_mass'] and system_prev['Current_liquid_oxidizer_mass'] > 0 and current_system['Mass_Flow_Ox'] > 0:
@@ -103,6 +115,9 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
         current_system['Ox_tank_temperature'] += dT
         ox_propert = Oxidizer_Properties(current_system['Ox_tank_temperature'], fluid)
         current_system['dP'] = ox_propert['Pressure'] - current_system['P_oxtank']
+        
+
+
     #If the mass of the oxidizer is not getting discharged and both greater than 0, take avg of the pressure changes after taking out all the negative numbers, then calc new temp and pressure
     elif system_prev['Current_liquid_oxidizer_mass'] >= system_prev['Previous_liquid_oxidizer_mass'] and system_prev['Current_liquid_oxidizer_mass'] > 0 and system_prev['Mass_Flow_Ox'] > 0:
         num_negatives = np.sum(total_system_properties['dP'] < 0)
@@ -118,11 +133,15 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
         current_system['Oxidizer_properties'] = Oxidizer_Properties(current_system['Ox_tank_temperature'], const_propert['fluid'])
         current_system['Current_liquid_oxidizer_mass'] = (constant_system_properties['Ox_tank_volume'] - current_system['Ox_Mass']/current_system['Oxidizer_properties']['Density_vapor'])/(1/current_system['Oxidizer_properties']['Density_liquid'] - 1/current_system['Oxidizer_properties']['Density_vapor'])
         current_system['Previous_liquid_oxidizer_mass'] = 0
-    #If there is still oxidizer in the system by the tank is empty, ...
+        
+
+
+    #If there is still oxidizer in the system but the tank is empty, ...
     elif system_prev['Current_liquid_oxidizer_mass'] <= 0 and current_system['Mass_Flow_Ox'] > 0:
         #If negative, set to 0, cuz otherwise it makes no sense :p
         if current_system['Current_liquid_oxidizer_mass'] != 0:
             current_system['Current_liquid_oxidizer_mass'] = 0
+            verbose_print(verbose, "Liquid oxidizer mass is negative, set to 0:", current_system['Current_liquid_oxidizer_mass'], time_propert['Current_time'])
 
         #Solving for the new compressibility factor, since the ox tank is empty
         Z_old = current_system['Oxidizer_properties']['Compressibility'] #Old compressibility factor
@@ -166,7 +185,7 @@ def ox_tank(fluid, system_prev, atmospheric_pressure, time_propert, const_proper
     
     return current_system
 
-def Regression_Rate(staticsystem, dynamicsystem, time):
+def Regression_Rate(staticsystem, dynamicsystem, time, verbose):
     '''Calculates the regression rate of the system using an empirically fitted function: r = aG^nL^m'''
     new_dynamic_system = copy.deepcopy(dynamicsystem)
     #Calculating the regression rate: r = aG^nL^m
@@ -183,7 +202,7 @@ def Regression_Rate(staticsystem, dynamicsystem, time):
     return new_dynamic_system
 
 
-def chamber(staticsystem, dynamicsystem, time, P_atm):
+def chamber(staticsystem, dynamicsystem, time, P_atm, verbose):
     '''Calculates the chamber pressure at the next time step'''
     #Calculating the volume of the chamber: V = 0.25*pi*D^2*L
     if staticsystem['Chamber_volume'] == 0:
@@ -215,16 +234,16 @@ def chamber(staticsystem, dynamicsystem, time, P_atm):
     return dynamicsystem
     
 
-def sim_iteration(overallsystem, staticsystem, dynamicsystem, time, iteration, CEA, P_atm):
+def sim_iteration(overallsystem, staticsystem, dynamicsystem, time, iteration, CEA, P_atm, verbose):
     '''ith iteration of the simulation'''
     #Note to self: CEA works in IMPERIAL!!!
     #Updating the time
     time['Current_time'] = time['Current_time'] + time['Change_in_time']
     #Updating the system properties
-    cursystem = ox_tank(staticsystem['fluid'], dynamicsystem, P_atm, time, staticsystem, overallsystem)
-    cursystem = Regression_Rate(staticsystem, cursystem, time)
+    cursystem = ox_tank(staticsystem['fluid'], dynamicsystem, P_atm, time, staticsystem, overallsystem, verbose)
+    cursystem = Regression_Rate(staticsystem, cursystem, time, verbose)
     cursystem['Cstar'] = CEA.get_Cstar(cursystem['P_chamber']*145/10e5, constant_system_properties['OF'])*c_eff * 0.3048
-    cursystem = chamber(staticsystem, cursystem, time, P_atm)
+    cursystem = chamber(staticsystem, cursystem, time, P_atm, verbose)
     Isp = CEA.get_Isp(cursystem['P_chamber']*145/10e5, staticsystem['OF'], staticsystem['Nozzle_expansion_ratio'])
     #Updating the overall system properties
     overallsystem['time'][iteration] = time['Current_time']
@@ -240,9 +259,25 @@ def sim_iteration(overallsystem, staticsystem, dynamicsystem, time, iteration, C
     overallsystem['Fuel_mass'][iteration] = cursystem['Fuel_mass']
     overallsystem['dP'][iteration] = cursystem['dP']
     overallsystem['Isp'][iteration] = Isp*staticsystem['Nozzle_efficiency']
+    
+    verbose_print(verbose, "\n\n", None, iteration, 1)
+    verbose_print(verbose, "Iteration", iteration, iteration)
+    verbose_print(verbose, "Current Time", time['Current_time'], iteration)
+    verbose_print(verbose, "Ox Mass", cursystem['Ox_Mass'], iteration)
+    verbose_print(verbose, "Ox Tank Pressure", cursystem['P_oxtank'], iteration)
+    verbose_print(verbose, "Chamber Pressure", cursystem['P_chamber'], iteration)
+    verbose_print(verbose, "Mass Flow Rate Ox", cursystem['Mass_Flow_Ox'], iteration)
+    verbose_print(verbose, "Mass Flow Rate Fuel", cursystem['Mass_flow_fuel'], iteration)
+    verbose_print(verbose, "OF", staticsystem['OF'], iteration)
+    verbose_print(verbose, "Grain ID", cursystem['Grain_ID'], iteration)
+    verbose_print(verbose, "Nozzle Mass Flow", cursystem['Nozzle_mass_flow'], iteration)
+    verbose_print(verbose, "Regression Rate", cursystem['Regression_rate'], iteration)
+    verbose_print(verbose, "Fuel Mass", cursystem['Fuel_mass'], iteration)
+    verbose_print(verbose, "dP", cursystem['dP'], iteration)
+    verbose_print(verbose, "Isp", overallsystem['Isp'][iteration], iteration)
     return staticsystem, cursystem, overallsystem, time
 
-def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
+def sim_loop(static_system, dynamic_system, time, overallsystem, CEA, verbose):
     '''Main function of the sim. Loops through multiple iterations to get the overall system properties'''
     i = 0
     #Creating a copy of the system properties
@@ -260,7 +295,7 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
         time['Current_time'] = i*time['Change_in_time']
         i+=1
         #Runs one iteration of the simulation
-        new_static_system, new_dynamic_system, new_overall_system, time = sim_iteration(new_overall_system, new_static_system, new_dynamic_system, time, i, CEA, P_atm)
+        new_static_system, new_dynamic_system, new_overall_system, time = sim_iteration(new_overall_system, new_static_system, new_dynamic_system, time, i, CEA, P_atm, verbose)
         #If the fuel is used up, the oxidizer is used up, the max time is reached, or the chamber pressure is less than the atmospheric pressure, break the loop
         if new_dynamic_system['Grain_ID']>=new_dynamic_system['Grain_OD']:
             print("No fuel left")
@@ -305,6 +340,25 @@ def sim_loop(static_system, dynamic_system, time, overallsystem, CEA):
     #
     visualize(new_overall_system)
     return new_overall_system
+
+def verbose_print(verbose, message, result, iteration, exception = 0):
+    '''Prints a message if verbose is true'''
+    if exception == 0:
+        if verbose == 1:
+            print(f"{message}={result}", end = ' ')
+        elif verbose == 2 and iteration%10==0 and iteration is not None:
+            print(f"{message}={result}", end = ' ')
+            
+    if exception == 1:
+        if verbose == 1:
+            print(message)
+        elif verbose == 2 and iteration%10==0 and iteration is not None:
+            print(message)
+                
+    
+
+        
+    
     
 
 def visualize(overallsystem, filename="output.csv"):
@@ -417,7 +471,7 @@ def on_button_click():
     time_step = 0.01
     # I Want to try and avoid using this
     simulation_time = 16
-    OF_ratio = 4.5
+    OF_ratio = 5
     fuel_density = 1000
     is_fly = True
 
@@ -500,7 +554,7 @@ def on_button_click():
     dynamic_system_propert['Oxidizer_properties'] = Oxidizer_Properties(dynamic_system_propert['Ox_tank_temperature'], fluid)
     dynamic_system_propert['Current_liquid_oxidizer_mass'] = (Ox_tank_vol - Starting_Ox_Mass/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])/(1/dynamic_system_propert['Oxidizer_properties']['Density_liquid'] - 1/dynamic_system_propert['Oxidizer_properties']['Density_vapor'])
     dynamic_system_propert['Previous_liquid_oxidizer_mass'] = dynamic_system_propert['Current_liquid_oxidizer_mass'] + 1
-    system = sim_loop(constant_system_properties, dynamic_system_propert, time_propert, overall_system, C)
+    system = sim_loop(constant_system_properties, dynamic_system_propert, time_propert, overall_system, C, verbose = 2)
     return system
 
 def required_massflow(impulse, thrust, p_chamber, OF_ratio, Nozzle_expansion_ratio, CEA):
