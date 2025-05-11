@@ -20,7 +20,7 @@ sim_vars = {
     "Injector_Discharge_Coefficient": 0.55, "Nozzle_Throat_Diameter": 0.0954,
     "Nozzle_Expansion_Ratio": 4, "Nozzle_Efficiency": 0.95,
     "Nozzle_Discharge_Ratio": 1, "c_eff": 0.9,
-    "dry_mass": 40, "viscosity": 3.70e-5, "For_flight": 0,
+    "dry_mass": 25, "viscosity": 3.70e-5, "For_flight": 0,
     "Aluminum_weight_percent": 0, "Carbon_black_weight_percent": 10
 }
 
